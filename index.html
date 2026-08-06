@@ -1,0 +1,171 @@
+<title>Spin for a Little Sunshine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --ground-1:#241b33; --ground-2:#3c2a54; --ground-3:#4a2f57;
+    --cream:#FBF1DA; --soft:#d7c4ef; --gold:#F2C14E; --gold-glow:#FFD97A;
+    --hub:#FBF1DA; --ink:#3a2a4f;
+    --seg-0:#F28C82; --seg-1:#F2C14E; --seg-2:#A9C6A0; --seg-3:#8FB8DE;
+    --seg-4:#C3A6E0; --seg-5:#F4A9C7; --seg-6:#F6B27A; --seg-7:#7FC9C0;
+    --display:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    min-height:100vh; font-family:var(--body); color:var(--cream);
+    background:
+      radial-gradient(1100px 620px at 78% -8%, rgba(255,217,122,.20), transparent 60%),
+      radial-gradient(760px 520px at 12% 108%, rgba(195,166,224,.22), transparent 60%),
+      linear-gradient(160deg,var(--ground-1),var(--ground-2) 55%,var(--ground-3));
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:2.2rem 1.1rem 2.8rem; overflow-x:hidden; position:relative;
+  }
+  /* soft drifting sparkles */
+  .sky{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
+  .sky i{position:absolute; width:6px; height:6px; border-radius:50%;
+    background:radial-gradient(circle,var(--gold-glow),rgba(255,217,122,0) 70%);
+    opacity:.0; animation:twinkle 6s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{opacity:0; transform:scale(.6)}50%{opacity:.9; transform:scale(1)}}
+
+  .wrap{position:relative; z-index:1; width:100%; max-width:520px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:.5rem}
+  .eyebrow{font-size:.78rem; letter-spacing:.24em; text-transform:uppercase;
+    color:var(--gold); font-weight:600}
+  h1{font-family:var(--display); font-weight:700; text-wrap:balance; margin:.15rem 0 .1rem;
+    font-size:clamp(1.9rem,6vw,3rem); line-height:1.04;
+    text-shadow:0 2px 18px rgba(255,217,122,.18)}
+  .lede{color:var(--soft); max-width:34ch; margin:0 auto .4rem; font-size:1rem; line-height:1.5}
+
+  .stage{position:relative; width:min(84vw,380px); aspect-ratio:1; margin:.4rem 0 .2rem}
+  .pointer{position:absolute; top:-6px; left:50%; transform:translateX(-50%); z-index:3;
+    width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
+    border-top:26px solid var(--gold); filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+  .pointer::after{content:""; position:absolute; left:-16px; top:-30px; width:32px; height:32px;
+    border-radius:50%; background:var(--gold); box-shadow:0 0 0 4px rgba(251,241,218,.85)}
+  canvas{width:100%; height:100%; display:block; border-radius:50%;
+    box-shadow:0 0 0 10px rgba(251,241,218,.9), 0 0 0 15px rgba(242,193,78,.55),
+      0 22px 55px rgba(0,0,0,.45), inset 0 0 40px rgba(0,0,0,.15);
+    transition:transform 4.4s cubic-bezier(.15,.86,.28,1)}
+  .hub{position:absolute; top:50%; left:50%; width:20%; aspect-ratio:1; transform:translate(-50%,-50%);
+    z-index:2; border-radius:50%; background:var(--hub); display:grid; place-items:center;
+    font-size:clamp(1.1rem,4.6vw,1.7rem); box-shadow:0 4px 14px rgba(0,0,0,.35), inset 0 0 0 3px var(--gold)}
+
+  button{font-family:var(--body); font-weight:700; font-size:1.05rem; color:var(--ink);
+    background:linear-gradient(180deg,var(--gold-glow),var(--gold)); border:0; cursor:pointer;
+    padding:.85rem 1.9rem; border-radius:999px; letter-spacing:.01em; margin-top:.8rem;
+    box-shadow:0 8px 22px rgba(242,193,78,.35), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .15s ease, box-shadow .2s ease}
+  button:hover{transform:translateY(-2px); box-shadow:0 12px 28px rgba(242,193,78,.45)}
+  button:active{transform:translateY(0)}
+  button:disabled{opacity:.55; cursor:default; transform:none; box-shadow:none}
+  button:focus-visible{outline:3px solid var(--cream); outline-offset:3px}
+
+  .result{margin-top:1.15rem; min-height:3.4em; display:flex; align-items:center; justify-content:center}
+  .card{font-family:var(--display); font-size:clamp(1.3rem,4.4vw,1.85rem); line-height:1.35;
+    color:var(--cream); max-width:26ch; padding:.9rem 1.2rem; border-radius:18px;
+    background:rgba(251,241,218,.08); border:1px solid rgba(251,241,218,.16);
+    box-shadow:0 10px 30px rgba(0,0,0,.28); opacity:0; transform:translateY(10px) scale(.98);
+    transition:opacity .5s ease, transform .5s ease}
+  .card.show{opacity:1; transform:none}
+  .foot{margin-top:1.4rem; color:var(--soft); font-size:.85rem; opacity:.8}
+
+  @media (prefers-reduced-motion:reduce){
+    canvas{transition:transform .5s ease}
+    .sky i{animation:none; opacity:.5}
+    .card{transition:opacity .3s ease}
+  }
+</style>
+
+<div class="sky" id="sky" aria-hidden="true"></div>
+
+<main class="wrap">
+  <p class="eyebrow">A little morning magic</p>
+  <h1>Spin for a Little Sunshine</h1>
+  <p class="lede">Give the wheel a spin and see the wish today has waiting for you.</p>
+
+  <div class="stage">
+    <div class="pointer" aria-hidden="true"></div>
+    <canvas id="wheel" width="800" height="800" role="img"
+            aria-label="A wheel of cheerful daily wishes"></canvas>
+    <div class="hub" aria-hidden="true">🌞</div>
+  </div>
+
+  <button id="spin" type="button">Spin the wheel</button>
+
+  <div class="result"><p class="card" id="card" role="status" aria-live="polite"></p></div>
+  <p class="foot">🌼 A different little wish every spin 🌼</p>
+</main>
+
+<script>
+(function(){
+  var SEG = [
+    {label:"Shine 🌻",  color:"#F28C82", msg:"You are someone's sunshine today. 🌻"},
+    {label:"Joy ☀️",    color:"#F2C14E", msg:"Today is quietly full of good things. ☀️"},
+    {label:"Bloom 🌸",  color:"#A9C6A0", msg:"Bloom right where you're planted. 🌸"},
+    {label:"Calm 🌿",   color:"#8FB8DE", msg:"Take a slow breath — you've got this. 🌿"},
+    {label:"Magic 🦋",  color:"#C3A6E0", msg:"Something wonderful is on its way. 🦋"},
+    {label:"Loved 💛",  color:"#F4A9C7", msg:"You are loved more than you know. 💛"},
+    {label:"Kind ✨",   color:"#F6B27A", msg:"Your kindness makes the world brighter. ✨"},
+    {label:"Rainbow 🌈",color:"#7FC9C0", msg:"After every storm comes your rainbow. 🌈"}
+  ];
+  var N = SEG.length, ARC = 360/N;
+  var canvas = document.getElementById("wheel"), ctx = canvas.getContext("2d");
+  var card = document.getElementById("card"), btn = document.getElementById("spin");
+  var rotation = 0, spinning = false;
+
+  function draw(){
+    var S = canvas.width, c = S/2, r = c - 6;
+    ctx.clearRect(0,0,S,S);
+    for(var i=0;i<N;i++){
+      var a0 = (-90 + i*ARC) * Math.PI/180, a1 = (-90 + (i+1)*ARC) * Math.PI/180;
+      ctx.beginPath(); ctx.moveTo(c,c); ctx.arc(c,c,r,a0,a1); ctx.closePath();
+      ctx.fillStyle = SEG[i].color; ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = "rgba(251,241,218,.85)"; ctx.stroke();
+      // label, drawn radially
+      ctx.save();
+      ctx.translate(c,c);
+      ctx.rotate((-90 + i*ARC + ARC/2) * Math.PI/180);
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#3a2a4f";
+      ctx.font = "700 " + Math.round(S*0.046) + "px 'Segoe UI',system-ui,sans-serif";
+      ctx.fillText(SEG[i].label, r - 22, 2);
+      ctx.restore();
+    }
+  }
+
+  function spin(){
+    if(spinning) return;
+    spinning = true; btn.disabled = true;
+    card.classList.remove("show");
+    var i = Math.floor(Math.random()*N);
+    var jitter = (Math.random()*2 - 1) * (ARC*0.34);
+    var landing = (360 - (i*ARC + ARC/2)) % 360;      // rotation (mod 360) that puts segment i under the top pointer
+    var base = rotation - (rotation % 360);
+    var next = base + landing;
+    while(next < rotation + 360*5) next += 360;         // always at least 5 full turns forward
+    rotation = next + jitter;
+    canvas.style.transform = "rotate(" + rotation + "deg)";
+    window.setTimeout(function(){
+      card.textContent = SEG[i].msg;
+      card.classList.add("show");
+      btn.textContent = "Spin again";
+      btn.disabled = false; spinning = false;
+    }, 4500);
+  }
+
+  // build sparkles
+  var sky = document.getElementById("sky");
+  for(var k=0;k<26;k++){
+    var s = document.createElement("i");
+    s.style.left = Math.random()*100 + "%";
+    s.style.top = Math.random()*100 + "%";
+    s.style.animationDelay = (Math.random()*6).toFixed(2) + "s";
+    s.style.transform = "scale(" + (0.5 + Math.random()*1.3).toFixed(2) + ")";
+    sky.appendChild(s);
+  }
+
+  draw();
+  btn.addEventListener("click", spin);
+})();
+</script>
