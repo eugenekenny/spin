@@ -3,19 +3,17 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://savvywayvacations.com/spin/">
 <meta property="og:title" content="Spin for a Little Sunshine">
-<meta property="og:description" content="Give the wheel a spin and see the little wish waiting for you today.">
+<meta property="og:description" content="Tap to spin the wheel and see the little wish waiting for you today.">
 <meta property="og:image" content="https://savvywayvacations.com/spin/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="Give the wheel a spin and see the little wish waiting for you today.">
+<meta name="description" content="Tap to spin the wheel and see the little wish waiting for you today.">
 <style>
   :root{
     --ground-1:#241b33; --ground-2:#3c2a54; --ground-3:#4a2f57;
     --cream:#FBF1DA; --soft:#d7c4ef; --gold:#F2C14E; --gold-glow:#FFD97A;
     --hub:#FBF1DA; --ink:#3a2a4f;
-    --seg-0:#F28C82; --seg-1:#F2C14E; --seg-2:#A9C6A0; --seg-3:#8FB8DE;
-    --seg-4:#C3A6E0; --seg-5:#F4A9C7; --seg-6:#F6B27A; --seg-7:#7FC9C0;
     --display:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
     --body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
   }
@@ -30,11 +28,10 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     padding:2.2rem 1.1rem 2.8rem; overflow-x:hidden; position:relative;
   }
-  /* soft drifting sparkles */
   .sky{position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden}
   .sky i{position:absolute; width:6px; height:6px; border-radius:50%;
     background:radial-gradient(circle,var(--gold-glow),rgba(255,217,122,0) 70%);
-    opacity:.0; animation:twinkle 6s ease-in-out infinite}
+    opacity:0; animation:twinkle 6s ease-in-out infinite}
   @keyframes twinkle{0%,100%{opacity:0; transform:scale(.6)}50%{opacity:.9; transform:scale(1)}}
 
   .wrap{position:relative; z-index:1; width:100%; max-width:520px; text-align:center;
@@ -67,8 +64,13 @@
     transition:transform .15s ease, box-shadow .2s ease}
   button:hover{transform:translateY(-2px); box-shadow:0 12px 28px rgba(242,193,78,.45)}
   button:active{transform:translateY(0)}
-  button:disabled{opacity:.55; cursor:default; transform:none; box-shadow:none}
+  button:disabled{opacity:.55; cursor:default; transform:none; box-shadow:none; animation:none}
   button:focus-visible{outline:3px solid var(--cream); outline-offset:3px}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 8px 22px rgba(242,193,78,.35), inset 0 1px 0 rgba(255,255,255,.5)}
+    50%{box-shadow:0 10px 34px rgba(255,217,122,.9), 0 0 0 7px rgba(255,217,122,.16), inset 0 1px 0 rgba(255,255,255,.5)}
+  }
+  button.pulse{animation:pulse 1.7s ease-in-out infinite}
 
   .result{margin-top:1.15rem; min-height:3.4em; display:flex; align-items:center; justify-content:center}
   .card{font-family:var(--display); font-size:clamp(1.3rem,4.4vw,1.85rem); line-height:1.35;
@@ -83,6 +85,7 @@
     canvas{transition:transform .5s ease}
     .sky i{animation:none; opacity:.5}
     .card{transition:opacity .3s ease}
+    button.pulse{animation:none}
   }
 </style>
 
@@ -122,6 +125,8 @@
   var canvas = document.getElementById("wheel"), ctx = canvas.getContext("2d");
   var card = document.getElementById("card"), btn = document.getElementById("spin");
   var rotation = 0, spinning = false;
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var idleRAF = null, idleOn = false, idleLast = 0;
 
   function draw(){
     var S = canvas.width, c = S/2, r = c - 6;
@@ -131,7 +136,6 @@
       ctx.beginPath(); ctx.moveTo(c,c); ctx.arc(c,c,r,a0,a1); ctx.closePath();
       ctx.fillStyle = SEG[i].color; ctx.fill();
       ctx.lineWidth = 4; ctx.strokeStyle = "rgba(251,241,218,.85)"; ctx.stroke();
-      // label, drawn radially
       ctx.save();
       ctx.translate(c,c);
       ctx.rotate((-90 + i*ARC + ARC/2) * Math.PI/180);
@@ -143,27 +147,44 @@
     }
   }
 
+  // gentle "attract" idle spin so the wheel looks alive & ready
+  function idleStep(now){
+    if(!idleOn) return;
+    var dt = now - idleLast; idleLast = now;
+    rotation += dt * 0.014;
+    canvas.style.transform = "rotate(" + rotation + "deg)";
+    idleRAF = requestAnimationFrame(idleStep);
+  }
+  function startIdle(){
+    if(reduce) return;
+    idleOn = true; canvas.style.transition = "none"; idleLast = performance.now();
+    idleRAF = requestAnimationFrame(idleStep);
+  }
+  function stopIdle(){ idleOn = false; if(idleRAF){ cancelAnimationFrame(idleRAF); } }
+
   function spin(){
     if(spinning) return;
-    spinning = true; btn.disabled = true;
+    spinning = true; btn.disabled = true; btn.classList.remove("pulse");
     card.classList.remove("show");
+    stopIdle();
+    canvas.style.transition = reduce ? "transform .5s ease" : "transform 4.4s cubic-bezier(.15,.86,.28,1)";
     var i = Math.floor(Math.random()*N);
     var jitter = (Math.random()*2 - 1) * (ARC*0.34);
-    var landing = (360 - (i*ARC + ARC/2)) % 360;      // rotation (mod 360) that puts segment i under the top pointer
+    var landing = (360 - (i*ARC + ARC/2)) % 360;
     var base = rotation - (rotation % 360);
     var next = base + landing;
-    while(next < rotation + 360*5) next += 360;         // always at least 5 full turns forward
+    while(next < rotation + 360*5) next += 360;
     rotation = next + jitter;
+    void canvas.offsetWidth;                 // reflow so the transition runs from here
     canvas.style.transform = "rotate(" + rotation + "deg)";
     window.setTimeout(function(){
       card.textContent = SEG[i].msg;
       card.classList.add("show");
       btn.textContent = "Spin again";
       btn.disabled = false; spinning = false;
-    }, 4500);
+    }, reduce ? 600 : 4500);
   }
 
-  // build sparkles
   var sky = document.getElementById("sky");
   for(var k=0;k<26;k++){
     var s = document.createElement("i");
@@ -175,6 +196,8 @@
   }
 
   draw();
+  btn.classList.add("pulse");
+  startIdle();
   btn.addEventListener("click", spin);
 })();
 </script>
